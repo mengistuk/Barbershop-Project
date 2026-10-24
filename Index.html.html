@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book an appointment</title>
+<style>
+  :root {
+    --bg: #f5f7f4;
+    --surface: #ffffff;
+    --text: #1d2a24;
+    --muted: #5d6b64;
+    --line: #d5ddd8;
+    --accent: #1f6b52;
+    --accent-text: #ffffff;
+    --error-bg: #fdecea;
+    --error-text: #8a1f17;
+    --ok-bg: #e6f4ec;
+    --ok-text: #14532d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121a16;
+      --surface: #1b2620;
+      --text: #e8efeb;
+      --muted: #9db0a6;
+      --line: #2f3d36;
+      --accent: #4fc79c;
+      --accent-text: #08231a;
+      --error-bg: #3a1a17;
+      --error-text: #ffb4ab;
+      --ok-bg: #16372a;
+      --ok-text: #a7f0c9;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    padding: 24px 16px 48px;
+  }
+  main { max-width: 520px; margin: 0 auto; }
+  main.wide { max-width: 820px; }
+  h1 { font-size: 1.75rem; margin: 0 0 4px; line-height: 1.2; }
+  p.sub { color: var(--muted); margin: 0 0 24px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  label { display: block; font-weight: 600; margin: 0 0 4px; }
+  .field { margin-bottom: 16px; }
+  input, select {
+    width: 100%;
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+  button {
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    border: 0;
+    border-radius: 8px;
+    padding: 11px 18px;
+    background: var(--accent);
+    color: var(--accent-text);
+  }
+  button.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--line);
+  }
+  button:disabled { opacity: .6; cursor: not-allowed; }
+  .full { width: 100%; }
+  .msg { border-radius: 8px; padding: 10px 12px; margin: 0 0 16px; }
+  .msg.error { background: var(--error-bg); color: var(--error-text); }
+  .msg.ok { background: var(--ok-bg); color: var(--ok-text); }
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .bar h1 { margin: 0; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: .9rem; }
+  .footer { text-align: center; margin-top: 24px; font-size: .9rem; }
+  .footer a { color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ============ CUSTOMER BOOKING VIEW ============ -->
+<main id="view-book">
+  <h1>Book an appointment</h1>
+  <p class="sub">Pick a service, a day and a time. We’ll see you then.</p>
+
+  <div class="card">
+    <div id="book-msg" class="msg" role="status" aria-live="polite" hidden></div>
+    <div id="book-form" role="group" aria-label="Booking details">
+      <div class="field">
+        <label for="customer_name">Your name</label>
+        <input id="customer_name" type="text" autocomplete="name" maxlength="100">
+      </div>
+      <div class="field">
+        <label for="phone">Phone number</label>
+        <input id="phone" type="tel" autocomplete="tel" maxlength="30">
+      </div>
+      <div class="field">
+        <label for="service">Service</label>
+        <select id="service"></select>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="booking_date">Date</label>
+          <input id="booking_date" type="date">
+        </div>
+        <div class="field">
+          <label for="booking_time">Time</label>
+          <select id="booking_time"></select>
+        </div>
+      </div>
+      <button id="book-btn" class="full" type="button">Book</button>
+    </div>
+  </div>
+
+  <p class="footer"><a href="#owner">Owner login</a></p>
+</main>
+
+<!-- ============ OWNER LOGIN VIEW ============ -->
+<main id="view-login" hidden>
+  <h1>Owner login</h1>
+  <p class="sub">Sign in to see your bookings.</p>
+
+  <div class="card">
+    <div id="login-msg" class="msg error" role="alert" hidden></div>
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password">
+    </div>
+    <button id="login-btn" class="full" type="button">Log in</button>
+  </div>
+
+  <p class="footer"><a href="#">Back to booking page</a></p>
+</main>
+
+<!-- ============ OWNER BOOKINGS VIEW ============ -->
+<main id="view-owner" class="wide" hidden>
+  <div class="bar">
+    <h1>Bookings</h1>
+    <div>
+      <button id="refresh-btn" class="secondary" type="button">Refresh</button>
+      <button id="logout-btn" type="button">Log out</button>
+    </div>
+  </div>
+  <div id="owner-msg" class="msg error" role="alert" hidden></div>
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Service</th>
+        </tr>
+      </thead>
+      <tbody id="bookings-body"></tbody>
+    </table>
+    <p id="empty-note" class="sub" style="margin:16px 12px 4px" hidden>No bookings yet.</p>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+  // ============ SETTINGS: change these ============
+  const SUPABASE_URL = "https://dhsjqamdjnjmoklvckwg.supabase.co/rest/v1/";      // e.g. https://abcdxyz.supabase.co
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b_31kwhpAFPwL6BuJFk6HQ_Kyu06m-5";
+  const SERVICES = ["Haircut", "Consultation", "Full service"]; // edit to match your business
+  const FIRST_HOUR = 9;   // first slot, 24-hour clock
+  const LAST_HOUR = 17;   // last slot
+  // ================================================
+
+  // Friendly messages (the only text customers ever see for problems)
+  const MSG = {
+    taken: "Sorry, that time is taken. Please pick another.",
+    generic: "Something went wrong on our side. Please try again in a moment.",
+    missing: "Please fill in every box before booking.",
+    badPhone: "Please enter a phone number we can call.",
+    pastDate: "Please pick today or a day in the future.",
+    success: "You’re booked! We’ll see you then.",
+    notReady: "Booking is not available right now. Please try again later.",
+    loginFail: "That email or password is not right. Please try again.",
+    loginMissing: "Please enter your email and password.",
+    loadFail: "We couldn’t load the bookings. Please try Refresh."
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---- Connect to Supabase (publishable key only; no secret keys) ----
+  let db = null;
+  try {
+    const looksSet = SUPABASE_URL.startsWith("https://") && !SUPABASE_PUBLISHABLE_KEY.includes("PASTE_");
+    if (looksSet && window.supabase) {
+      db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    }
+  } catch (e) {
+    db = null;
+  }
+
+  // ---- Small helpers ----
+  function showMsg(el, text, kind) {
+    el.textContent = text;
+    el.className = "msg" + (kind ? " " + kind : "");
+    el.hidden = false;
+  }
+  function hideMsg(el) { el.hidden = true; el.textContent = ""; }
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function todayString() {
+    const d = new Date();
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+  function prettyTime(t) {            // "09:00:00" -> "9:00 AM"
+    const [h, m] = String(t).split(":").map(Number);
+    const hour12 = ((h + 11) % 12) + 1;
+    return hour12 + ":" + pad(m) + " " + (h < 12 ? "AM" : "PM");
+  }
+  function prettyDate(s) {            // "2026-10-24" -> "Sat, Oct 24, 2026"
+    const [y, m, d] = String(s).split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+      weekday: "short", month: "short", day: "numeric", year: "numeric"
+    });
+  }
+
+  // ---- Fill in the form choices ----
+  SERVICES.forEach((name) => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    $("service").appendChild(opt);
+  });
+  for (let h = FIRST_HOUR; h <= LAST_HOUR; h++) {
+    const opt = document.createElement("option");
+    opt.value = pad(h) + ":00";
+    opt.textContent = prettyTime(pad(h) + ":00");
+    $("booking_time").appendChild(opt);
+  }
+  $("booking_date").min = todayString();
+
+  // ---- Customer: press Book ----
+  $("book-btn").addEventListener("click", async () => {
+    const msg = $("book-msg");
+    hideMsg(msg);
+
+    const row = {
+      customer_name: $("customer_name").value.trim(),
+      phone: $("phone").value.trim(),
+      service: $("service").value,
+      booking_date: $("booking_date").value,
+      booking_time: $("booking_time").value
+    };
+
+    if (!row.customer_name || !row.phone || !row.service || !row.booking_date || !row.booking_time) {
+      return showMsg(msg, MSG.missing, "error");
+    }
+    if (row.phone.replace(/\D/g, "").length < 6) {
+      return showMsg(msg, MSG.badPhone, "error");
+    }
+    if (row.booking_date < todayString()) {
+      return showMsg(msg, MSG.pastDate, "error");
+    }
+    if (!db) {
+      return showMsg(msg, MSG.notReady, "error");
+    }
+
+    const btn = $("book-btn");
+    btn.disabled = true;
+    btn.textContent = "Booking…";
+    try {
+      // No .select() here: customers may add a row but are not allowed to read rows back.
+      const { error } = await db.from("bookings").insert(row);
+      if (error) {
+        // 23505 = unique violation (that date + time already has a booking)
+        if (error.code === "23505") {
+          showMsg(msg, MSG.taken, "error");
+        } else {
+          console.error(error);       // for the site owner only, never shown on the page
+          showMsg(msg, MSG.generic, "error");
+        }
+      } else {
+        showMsg(msg, MSG.success, "ok");
+        $("customer_name").value = "";
+        $("phone").value = "";
+        $("booking_date").value = "";
+      }
+    } catch (e) {
+      console.error(e);
+      showMsg(msg, MSG.generic, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Book";
+    }
+  });
+
+  // ---- Owner: log in ----
+  $("login-btn").addEventListener("click", async () => {
+    const msg = $("login-msg");
+    hideMsg(msg);
+    const email = $("email").value.trim();
+    const password = $("password").value;
+    if (!email || !password) return showMsg(msg, MSG.loginMissing, "error");
+    if (!db) return showMsg(msg, MSG.notReady, "error");
+
+    const btn = $("login-btn");
+    btn.disabled = true;
+    try {
+      const { error } = await db.auth.signInWithPassword({ email, password });
+      if (error) {
+        console.error(error);
+        const wrong = error.status === 400 || error.code === "invalid_credentials";
+        showMsg(msg, wrong ? MSG.loginFail : MSG.generic, "error");
+      } else {
+        $("password").value = "";
+        route();
+      }
+    } catch (e) {
+      console.error(e);
+      showMsg(msg, MSG.generic, "error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") $("login-btn").click(); });
+
+  // ---- Owner: load bookings (sorted by date, then time) ----
+  async function loadBookings() {
+    const msg = $("owner-msg");
+    hideMsg(msg);
+    const body = $("bookings-body");
+    try {
+      const { data, error } = await db
+        .from("bookings")
+        .select("customer_name, phone, service, booking_date, booking_time")
+        .order("booking_date", { ascending: true })
+        .order("booking_time", { ascending: true });
+      if (error) throw error;
+
+      body.textContent = "";
+      data.forEach((b) => {
+        const tr = document.createElement("tr");
+        [prettyDate(b.booking_date), prettyTime(b.booking_time), b.customer_name, b.phone, b.service]
+          .forEach((text) => {
+            const td = document.createElement("td");
+            td.textContent = text;     // textContent keeps customer text from running as code
+            tr.appendChild(td);
+          });
+        body.appendChild(tr);
+      });
+      $("empty-note").hidden = data.length > 0;
+    } catch (e) {
+      console.error(e);
+      showMsg(msg, MSG.loadFail, "error");
+    }
+  }
+  $("refresh-btn").addEventListener("click", loadBookings);
+
+  // ---- Owner: log out ----
+  $("logout-btn").addEventListener("click", async () => {
+    try { await db.auth.signOut(); } catch (e) { console.error(e); }
+    $("bookings-body").textContent = "";
+    route();
+  });
+
+  // ---- Which screen to show ----
+  function show(id) {
+    ["view-book", "view-login", "view-owner"].forEach((v) => { $(v).hidden = v !== id; });
+  }
+  async function route() {
+    if (location.hash !== "#owner") return show("view-book");
+    if (!db) { show("view-login"); return showMsg($("login-msg"), MSG.notReady, "error"); }
+
+    let session = null;
+    try {
+      const res = await db.auth.getSession();
+      session = res.data.session;
+    } catch (e) {
+      console.error(e);
+    }
+    if (session) {
+      show("view-owner");
+      loadBookings();
+    } else {
+      show("view-login");
+    }
+  }
+  window.addEventListener("hashchange", route);
+  route();
+</script>
+</body>
+</html>
